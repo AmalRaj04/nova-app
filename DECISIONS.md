@@ -24,3 +24,5 @@ Defaults chosen for the open questions in NOVA_APP_SPEC.md. Each can change in d
 - Step 0: Gradle 9.9.1, AGP 9.5.1, Kotlin 2.4.21 (latest stable found on 2026-11-15). The machine has only JDK 23, so `:core` targets JVM 17 bytecode without a toolchain.
 - Step 1: `MapLoader` returns all data-check errors at once (not just the first) so the team can fix a file in one pass. Optional node field `spoken` is already in the model for speech-only names.
 - Step 2: A turn of exactly 180 degrees counts as +180 (turn around). `TurnClassifier` returns an enum; the spoken words are added in Step 3 with `Phrases`.
+- Step 3: The spec gives wording only for walk-then-stairs. Where it is silent I chose: stairs as the first movement of a leg say "Climb {s} steps up." (no "Then"); a walk after stairs says "Then walk about {n} steps."; 1 step is spoken as "1 step". A turn is worked out once per leg, at the start marker; later edges in the same leg get no turn word.
+- Step 3: A leg ends at the next node that has a marker, so unmarked nodes (stairs foot, upper landing) are folded into the leg before them.
