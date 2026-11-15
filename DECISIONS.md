@@ -60,3 +60,17 @@ Run: `./gradlew test assembleDebug` (all pass: 71 `:core` tests, 13 `:app` tests
 - Seen working: the camera starts when guidance starts, the developer panel shows the live preview and an analysis rate (2.7 to 5.6 frames per second on the slow emulator, against a limit of about 6.7), and after pressing Home and reopening the app the preview and rate come back.
 - Not run: a real phone camera, camera error and Retry on a device, camera permission denied on a device, the 1280 by 720 resolution on real hardware, battery and heat.
 - Fixed during testing: the preview drew over the developer panel text until it used the compatible mode.
+- Step 7: OpenCV 5.1.0 from Maven Central (`org.opencv:opencv`), which has the ArUco classes in `org.opencv.objdetect` (`ArucoDetector`, `Objdetect.getPredefinedDictionary`). `OpenCVLoader.initLocal()` loads the native library. Default detector parameters are used.
+- Step 7: Only `ArucoMarkerDetector` uses OpenCV in the app. The dictionary name comes from `markers.json`; only the 4x4 dictionaries are accepted and any other name fails loudly.
+- Step 7: OpenCV is large. Packaging is limited to `arm64-v8a`, `armeabi-v7a` and `x86_64`, and the debug APK is still about 148 MB. A release build compresses and will be smaller; measure it in Step 9.
+- Step 7: With no markers, OpenCV can return an empty `ids` matrix that is not zero rows; the detector counts the corner list instead.
+- Step 7: The developer overlay draws green boxes and "ID n" over the preview. Image corners are turned by the frame rotation and fitted to the view in `MarkerGeometry.toView` (unit tested).
+- Step 7: `tools/make_markers.py` writes `tools/markers/marker_00.png` to `marker_10.png` (white border, "NOVA marker n" printed below, 300 dpi, size set with `--size-cm`, default 10 cm). The size is only a default for printing tests; the app does not use it.
+
+## Step 7 test note
+
+Run: `./gradlew test assembleDebug` (71 `:core` tests, 21 `:app` unit tests including marker size and overlay maths), and `./gradlew connectedDebugAndroidTest` on an Android emulator: 6 of 6 pass. They generate marker images with OpenCV and check that IDs 0 to 10 are each read back, a rotated marker is read, a blank image finds nothing, the detector works again after release, the minimum size limit rejects a small marker, and frames of different sizes work. `tools/make_markers.py` output was also read back by Python's OpenCV for all 11 IDs.
+
+- Seen working: the app runs with OpenCV analysing live emulator camera frames (the panel shows "Markers in view: none" because the virtual scene has no marker), with no crash. Analysis ran at about 1.3 frames per second on the slow emulator; that is not a measure of a real phone.
+- Not run: reading a printed marker live with a real camera (needed for the "a printed marker is read live" acceptance), the farthest reading distance for each marker, a real phone, speed on real hardware. Step 7 is therefore not fully accepted until the team prints markers and checks them with the developer panel.
+- Fixed during testing: the detector crashed on an image with no markers until the empty `ids` case was handled.

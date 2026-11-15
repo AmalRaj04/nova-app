@@ -15,4 +15,4 @@ Requires a JDK (17 or newer) and the Android SDK (path in `local.properties`, no
 
 ## Versions
 
-Gradle 9.9.1, Android Gradle Plugin 9.5.1, Kotlin 2.4.21, kotlinx.serialization 1.13.0.
+Gradle 9.9.1, Android Gradle Plugin 9.5.1, Kotlin 2.4.21, kotlinx.serialization 1.13.0, Compose BOM 2026.09.00, CameraX 1.6.2, OpenCV 5.1.0.

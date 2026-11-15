@@ -15,17 +15,20 @@ import androidx.lifecycle.LifecycleOwner
 import com.genvision.nova.core.Config
 import java.util.concurrent.Executors
 
+/** What one analysed frame found. Size and rotation let the developer overlay place the boxes. */
+data class FrameResult(val markers: List<DetectedMarker>, val width: Int, val height: Int, val rotationDegrees: Int)
+
 /**
  * Runs the back camera for marker analysis. `ImageAnalysis` always runs; `Preview` only when a
  * surface is given (developer mode). Frames closer than [Config.ANALYSIS_INTERVAL_MS] are
  * dropped, and old frames are never queued (keep-only-latest).
  *
- * Callbacks [onDetections], [onRate] and [onError] are called on the MAIN thread.
+ * Callbacks [onResult], [onRate] and [onError] are called on the MAIN thread.
  */
 class CameraSession(
     private val context: Context,
     private val detector: MarkerDetector,
-    private val onDetections: (List<Int>) -> Unit,
+    private val onResult: (FrameResult) -> Unit,
     private val onRate: (Double) -> Unit,
     private val onError: (String) -> Unit,
 ) {
@@ -101,8 +104,10 @@ class CameraSession(
             if (grayBuffer.size != size) grayBuffer = ByteArray(size)
             copyLuminance(plane.buffer, image.width, image.height, plane.rowStride, grayBuffer)
 
-            val ids = detector.detect(GrayFrame(image.width, image.height, grayBuffer)).map { it.id }
-            mainExecutor.execute { onDetections(ids) }
+            val rotation = image.imageInfo.rotationDegrees
+            val markers = detector.detect(GrayFrame(image.width, image.height, grayBuffer, rotation))
+            val result = FrameResult(markers, image.width, image.height, rotation)
+            mainExecutor.execute { onResult(result) }
             meter.onFrame(now)?.let { rate -> mainExecutor.execute { onRate(rate) } }
         } catch (e: Exception) {
             mainExecutor.execute { onError("The camera stopped working: ${e.message ?: "unknown problem"}") }

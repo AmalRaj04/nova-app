@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.genvision.nova.camera.FrameResult
 import com.genvision.nova.core.Config
 import com.genvision.nova.core.data.LoadResult
 import com.genvision.nova.core.data.LoadedData
@@ -45,6 +46,8 @@ data class UiState(
     val settingsOpen: Boolean = false,
     /** Marker analysis frames per second, shown in the developer panel. */
     val analysisRate: Double = 0.0,
+    /** Latest detections for the developer overlay (null when none). */
+    val overlay: FrameResult? = null,
     val settings: Settings = Settings(),
     val markerIds: List<Int> = emptyList(),
     val logLines: List<String> = emptyList(),
@@ -77,6 +80,10 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
     /** Bumped by Retry after a camera error so the camera is started again. */
     val cameraGeneration: StateFlow<Int> = _cameraGeneration
     private var analysisRate = 0.0
+    private var overlay: FrameResult? = null
+
+    /** Dictionary named in markers.json (valid once the map has loaded). */
+    val markerDictionary: String get() = loaded?.markers?.meta?.dictionary ?: "DICT_4X4_50"
     private var cameraWanted = false
     private var cameraPaused = false
 
@@ -145,8 +152,15 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
         dispatch(NavEvent.Sighting(markerId))
     }
 
-    /** Detections from one analysed camera frame (used from Step 6 on). */
-    fun onFrameDetections(markerIds: List<Int>) {
+    /** One analysed camera frame: feeds the developer overlay and the sighting filter. */
+    fun onFrameResult(result: FrameResult) {
+        val hadOverlay = overlay != null
+        overlay = result.takeIf { it.markers.isNotEmpty() && settingsStore.settings.value.developerMode }
+        if (overlay != null || hadOverlay) publish()
+        onFrameDetections(result.markers.map { it.id })
+    }
+
+    private fun onFrameDetections(markerIds: List<Int>) {
         val data = loaded ?: return
         markerIds.filter { data.markers.marker(it) == null }.distinct().forEach {
             log.log("unknown_marker", mapOf("marker" to it.toString()))
@@ -219,6 +233,7 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
                 requestPermission = requestPermission,
                 settingsOpen = settingsOpen,
                 analysisRate = analysisRate,
+                overlay = overlay,
                 settings = settingsStore.settings.value,
                 markerIds = data?.markers?.markers?.map { it.id }?.sorted() ?: emptyList(),
                 logLines = log.tail.value,

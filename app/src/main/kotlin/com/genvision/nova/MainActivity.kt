@@ -19,7 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.camera.view.PreviewView
 import com.genvision.nova.camera.CameraSession
-import com.genvision.nova.camera.FakeMarkerDetector
+import com.genvision.nova.camera.ArucoMarkerDetector
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -41,10 +41,9 @@ class MainActivity : ComponentActivity() {
     private val cameraPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.onPermissionResult(it) }
 
-    /** Replaced by the OpenCV detector in Step 7. */
-    private val detector = FakeMarkerDetector()
+    private val detector = ArucoMarkerDetector(dictionaryName = { vm.markerDictionary })
     private val camera by lazy {
-        CameraSession(this, detector, vm::onFrameDetections, vm::onAnalysisRate, vm::onCameraError)
+        CameraSession(this, detector, vm::onFrameResult, vm::onAnalysisRate, vm::onCameraError)
     }
     private var previewView by mutableStateOf<PreviewView?>(null)
 

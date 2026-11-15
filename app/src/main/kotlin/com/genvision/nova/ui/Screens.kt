@@ -2,6 +2,8 @@ package com.genvision.nova.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.systemBars
@@ -21,6 +23,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import com.genvision.nova.camera.MarkerGeometry
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.Role
@@ -169,7 +177,9 @@ fun DevPanel(ui: UiState, onSimulate: (Int) -> Unit, onExportLog: () -> Unit, on
         Text("Developer panel", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
         Text("State: ${ui.navState}. Current place: ${ui.currentPlace}.", fontSize = 18.sp)
         Text("Analysis rate: %.1f frames per second".format(ui.analysisRate), fontSize = 18.sp)
-        Text("Marker detection is not connected yet (OpenCV comes in Step 7), so the camera finds no markers.", fontSize = 16.sp)
+        val seen = ui.overlay?.markers?.joinToString { it.id.toString() } ?: "none"
+        Text("Markers in view: $seen", fontSize = 18.sp)
+        Box(modifier = Modifier.fillMaxWidth().height(240.dp).clipToBounds()) {
         AndroidView(
             factory = {
                 // COMPATIBLE uses a TextureView, which respects Compose layout and clipping.
@@ -179,8 +189,10 @@ fun DevPanel(ui: UiState, onSimulate: (Int) -> Unit, onExportLog: () -> Unit, on
                 }.also(onPreviewView)
             },
             onRelease = { onPreviewView(null) },
-            modifier = Modifier.fillMaxWidth().height(240.dp).clipToBounds(),
+            modifier = Modifier.matchParentSize(),
         )
+        MarkerOverlay(ui.overlay)
+        }
         ui.markerIds.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 row.forEach { id ->
@@ -195,5 +207,29 @@ fun DevPanel(ui: UiState, onSimulate: (Int) -> Unit, onExportLog: () -> Unit, on
             Text(it, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** Boxes and IDs around the markers found in the latest frame (developer panel only). */
+@Composable
+private fun MarkerOverlay(result: com.genvision.nova.camera.FrameResult?) {
+    val measurer = rememberTextMeasurer()
+    val boxColor = Color(0xFF00E676)
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val r = result ?: return@Canvas
+        for (marker in r.markers) {
+            val pts = marker.corners.map {
+                val (x, y) = MarkerGeometry.toView(it.first, it.second, r.width, r.height, r.rotationDegrees, size.width, size.height)
+                Offset(x, y)
+            }
+            if (pts.size != 4) continue
+            for (i in 0 until 4) drawLine(boxColor, pts[i], pts[(i + 1) % 4], strokeWidth = 6f)
+            drawText(
+                measurer,
+                text = "ID ${marker.id}",
+                topLeft = pts[0],
+                style = TextStyle(color = boxColor, fontSize = 22.sp, background = Color.Black),
+            )
+        }
     }
 }

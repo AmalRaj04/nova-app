@@ -4,16 +4,22 @@ package com.genvision.nova.camera
 data class DetectedMarker(val id: Int, val corners: List<Pair<Float, Float>> = emptyList())
 
 /** A grey (luminance) camera frame with the row stride already removed: `data.size == width * height`. */
-class GrayFrame(val width: Int, val height: Int, val data: ByteArray)
+class GrayFrame(
+    val width: Int,
+    val height: Int,
+    val data: ByteArray,
+    /** Clockwise degrees to turn the image upright. Detection ignores it; the developer overlay uses it. */
+    val rotationDegrees: Int = 0,
+)
 
-/** Finds ArUco markers in a frame. The OpenCV implementation (Step 7) is the only OpenCV user. */
+/** Finds ArUco markers in a frame. [ArucoMarkerDetector] is the only OpenCV user. */
 interface MarkerDetector {
     fun detect(frame: GrayFrame): List<DetectedMarker>
-    /** Free native memory. Called when analysis stops. */
+    /** Free native memory. Called when analysis stops. [detect] must still work afterwards. */
     fun release() {}
 }
 
-/** Stand-in used before OpenCV is wired in, and in tests. Returns whatever IDs it was told to. */
+/** Stand-in for tests and for running without OpenCV. Returns whatever IDs it was told to. */
 class FakeMarkerDetector(var idsToReturn: List<Int> = emptyList()) : MarkerDetector {
     override fun detect(frame: GrayFrame): List<DetectedMarker> = idsToReturn.map { DetectedMarker(it) }
 }
