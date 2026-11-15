@@ -16,6 +16,14 @@ object Phrases {
     const val ASKING_CAMERA_PERMISSION =
         "NOVA needs to use the camera to read markers. Please allow it when asked."
     const val RETRYING = "Trying again."
+    const val VOICE_NOT_UNDERSTOOD =
+        "I did not understand. Say go to, then a room. Or say repeat, where am I, or stop."
+    const val VOICE_NEEDS_MICROPHONE =
+        "Voice commands need the microphone. Please allow it in settings, or use the buttons."
+    const val VOICE_NOT_AVAILABLE = "Voice commands are not available on this phone. Please use the buttons."
+    const val VOICE_STOP_FIRST = "Say stop first, then choose a place."
+    const val VOICE_NO_INSTRUCTION_YET = "I have not given an instruction yet. Point the phone forward at a marker."
+    const val VOICE_NOT_GUIDING = "Guidance has not started. Say go to, then a room."
     const val PERMISSION_DENIED =
         "NOVA needs the camera to read markers. Please allow the camera in settings."
 

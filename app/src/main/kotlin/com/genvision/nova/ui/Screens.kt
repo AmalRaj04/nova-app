@@ -18,7 +18,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -75,11 +80,14 @@ fun LoadingScreen() = Page("NOVA") {
 }
 
 @Composable
-fun HomeScreen(ui: UiState, onChoose: (String) -> Unit, onSettings: () -> Unit, onOpenAppSettings: () -> Unit) =
+fun HomeScreen(ui: UiState, onChoose: (String) -> Unit, onSettings: () -> Unit, onOpenAppSettings: () -> Unit, onVoice: () -> Unit) =
     Page("NOVA") {
         Text("Where do you want to go?", fontSize = 28.sp)
         ui.destinations.forEach { d ->
             BigButton("Go to ${d.name}", onClick = { onChoose(d.id) }, minHeight = 96.dp, textSize = 32)
+        }
+        if (ui.voiceReady) {
+            BigButton("Speak a command", onClick = onVoice, primary = false)
         }
         if (ui.showSettingsButton) {
             Text("NOVA needs the camera to read markers.", fontSize = 22.sp)
@@ -89,13 +97,14 @@ fun HomeScreen(ui: UiState, onChoose: (String) -> Unit, onSettings: () -> Unit, 
     }
 
 @Composable
-fun GuidanceScreen(ui: UiState, vm: NovaViewModel, onExportLog: () -> Unit, onPreviewView: (PreviewView?) -> Unit) =
+fun GuidanceScreen(ui: UiState, vm: NovaViewModel, onExportLog: () -> Unit, onVoice: () -> Unit, onPreviewView: (PreviewView?) -> Unit) =
     Page("Going to ${ui.destinationName}") {
         Text(ui.guidanceText, fontSize = 30.sp, lineHeight = 38.sp)
         BigButton("Repeat", onClick = vm::repeat, minHeight = 160.dp, textSize = 36)
         BigButton("Where am I", onClick = vm::whereAmI, minHeight = 96.dp, primary = false)
         BigButton("Stop", onClick = vm::stop, minHeight = 96.dp, primary = false)
-        if (ui.settings.developerMode) DevPanel(ui, vm::simulateSighting, onExportLog, onPreviewView)
+        if (ui.voiceReady) BigButton("Speak a command", onClick = onVoice, minHeight = 96.dp, primary = false)
+        if (ui.settings.developerMode) DevPanel(ui, vm::simulateSighting, vm::typedCommand, onExportLog, onPreviewView)
     }
 
 @Composable
@@ -145,6 +154,30 @@ fun SettingsScreen(ui: UiState, vm: NovaViewModel) = Page("Settings") {
         Text("For the team", fontSize = 24.sp)
         Switch(checked = s.developerMode, onCheckedChange = null)
     }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 72.dp)
+            .toggleable(
+                value = s.voiceCommands,
+                enabled = ui.voiceAvailable,
+                role = Role.Switch,
+                onValueChange = { on -> vm.changeSettings { it.copy(voiceCommands = on) } },
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text("Voice commands", fontSize = 24.sp)
+        Switch(checked = s.voiceCommands && ui.voiceAvailable, onCheckedChange = null, enabled = ui.voiceAvailable)
+    }
+    Text(
+        if (ui.voiceAvailable) "When on, a Speak a command button appears, and the Volume up key starts listening " +
+            "(so Volume up no longer raises the volume; use Volume down and the phone's volume panel). " +
+            "Say go to D13, repeat, where am I, or stop. It works offline."
+        else "Voice commands are not available on this phone. They need Android 13 or newer with offline " +
+            "speech recognition installed. The buttons always work.",
+        fontSize = 18.sp,
+    )
     Text("About NOVA", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
     Text(ABOUT_TEXT, fontSize = 18.sp)
     BigButton("Back", onClick = vm::closeSettings, primary = false)
@@ -178,7 +211,7 @@ private const val ABOUT_TEXT =
 
 /** Developer panel (FR-18, FR-19): simulate sightings, see state and the log. */
 @Composable
-fun DevPanel(ui: UiState, onSimulate: (Int) -> Unit, onExportLog: () -> Unit, onPreviewView: (PreviewView?) -> Unit) {
+fun DevPanel(ui: UiState, onSimulate: (Int) -> Unit, onTypedCommand: (String) -> Unit, onExportLog: () -> Unit, onPreviewView: (PreviewView?) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Developer panel", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
         Text("State: ${ui.navState}. Current place: ${ui.currentPlace}.", fontSize = 18.sp)
@@ -208,6 +241,14 @@ fun DevPanel(ui: UiState, onSimulate: (Int) -> Unit, onExportLog: () -> Unit, on
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
+        var typed by remember { mutableStateOf("") }
+        OutlinedTextField(
+            value = typed,
+            onValueChange = { typed = it },
+            label = { Text("Type a voice command, for example go to D13") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        BigButton("Run typed command", onClick = { onTypedCommand(typed) }, minHeight = 56.dp, primary = false, textSize = 18)
         BigButton("Export log", onClick = onExportLog, minHeight = 56.dp, primary = false, textSize = 18)
         Text("Last ${ui.logLines.size} log lines", fontSize = 16.sp)
         ui.logLines.reversed().forEach {

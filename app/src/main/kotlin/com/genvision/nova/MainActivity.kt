@@ -19,6 +19,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.camera.view.PreviewView
 import com.genvision.nova.camera.CameraSession
+import com.genvision.nova.voice.DeepLink
+import com.genvision.nova.voice.VoiceListener
+import com.genvision.nova.voice.VoiceProblem
+import android.view.KeyEvent
+import android.content.Intent as AndroidIntent
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
 import com.genvision.nova.camera.ArucoMarkerDetector
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -47,18 +54,62 @@ class MainActivity : ComponentActivity() {
     }
     private var previewView by mutableStateOf<PreviewView?>(null)
 
+    /** A destination from a link or shortcut, waiting until the Home screen is ready. */
+    private var pendingDestination by mutableStateOf<String?>(null)
+
+    private val micPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) startVoice() else vm.onVoiceProblem(VoiceProblem.NEEDS_PERMISSION)
+        }
+    private val voice by lazy { VoiceListener(this, vm::onVoiceHeard, vm::onVoiceProblem) }
+
+    /** Starts listening for one spoken command (button, or the Volume up key). */
+    private fun startVoice() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            micPermission.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
+        vm.beforeListening()
+        voice.start()
+    }
+
+    /** Volume up is the talk key, but only when the person has switched voice commands on. */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP && vm.ui.value.voiceReady) {
+            if (event.repeatCount == 0) startVoice()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onNewIntent(intent: AndroidIntent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readDeepLink(intent)
+    }
+
+    private fun readDeepLink(intent: AndroidIntent?) {
+        DeepLink.destinationId(intent?.dataString)?.let { pendingDestination = it }
+    }
+
     override fun onDestroy() {
         camera.shutdown()
+        voice.cancel()
         super.onDestroy()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        vm.hasCameraPermission = ::hasCameraPermission
         // Leaving the app pauses the camera; coming back resumes it (FR-17).
         lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStop(owner: LifecycleOwner) = vm.appBackgrounded()
+            override fun onStop(owner: LifecycleOwner) {
+                voice.cancel()
+                vm.appBackgrounded()
+            }
             override fun onStart(owner: LifecycleOwner) = vm.appForegrounded()
         })
+        readDeepLink(intent)
         setContent { NovaTheme { NovaApp() } }
     }
 
@@ -71,6 +122,29 @@ class MainActivity : ComponentActivity() {
                 vm.permissionRequestHandled()
                 cameraPermission.launch(Manifest.permission.CAMERA)
             }
+        }
+
+        // A link, shortcut or voice assistant asked for a destination: start it once Home is ready.
+        LaunchedEffect(ui.navState, pendingDestination) {
+            val id = pendingDestination
+            if (id != null && ui.navState == NavState.HOME) {
+                pendingDestination = null
+                if (vm.destinationIsKnown(id)) vm.chooseDestination(id, hasCameraPermission())
+            } else if (id != null && ui.navState != NavState.LOADING && ui.navState != NavState.HOME) {
+                pendingDestination = null // the person is already doing something else
+            }
+        }
+
+        // One shortcut per room in map.json, so the phone's assistant or launcher can start guidance.
+        LaunchedEffect(ui.destinations) {
+            if (ui.destinations.isEmpty()) return@LaunchedEffect
+            val shortcuts = ui.destinations.map {
+                ShortcutInfoCompat.Builder(this@MainActivity, "go_${it.id}")
+                    .setShortLabel("Go to ${it.name}")
+                    .setIntent(AndroidIntent(AndroidIntent.ACTION_VIEW, Uri.parse(DeepLink.forDestination(it.id)), this@MainActivity, MainActivity::class.java))
+                    .build()
+            }
+            try { ShortcutManagerCompat.setDynamicShortcuts(this@MainActivity, shortcuts) } catch (_: Exception) { }
         }
 
         // Messages routed to the accessibility system, so TalkBack reads them in its own turn.
@@ -114,8 +188,9 @@ class MainActivity : ComponentActivity() {
                     onChoose = { vm.chooseDestination(it, hasCameraPermission()) },
                     onSettings = vm::openSettings,
                     onOpenAppSettings = ::openAppSettings,
+                    onVoice = ::startVoice,
                 )
-                NavState.WAITING, NavState.GUIDING -> GuidanceScreen(ui, vm, ::exportLog) { previewView = it }
+                NavState.WAITING, NavState.GUIDING -> GuidanceScreen(ui, vm, ::exportLog, ::startVoice) { previewView = it }
                 NavState.ARRIVED -> ArrivalScreen(ui, vm::chooseAnother)
                 NavState.ERROR -> ErrorScreen(ui, vm::retry, vm::back)
             }

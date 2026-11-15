@@ -15,6 +15,7 @@ class SettingsStore(context: Context) {
         val d = Settings()
         return Settings(
             developerMode = prefs.getBoolean(KEY_DEV, d.developerMode),
+            voiceCommands = prefs.getBoolean(KEY_VOICE, d.voiceCommands),
         ).withStepLength(prefs.getFloat(KEY_STEP, d.stepLengthM.toFloat()).toDouble())
             .withSpeechRate(prefs.getFloat(KEY_RATE, d.speechRate.toFloat()).toDouble())
     }
@@ -26,6 +27,7 @@ class SettingsStore(context: Context) {
             .putFloat(KEY_STEP, next.stepLengthM.toFloat())
             .putFloat(KEY_RATE, next.speechRate.toFloat())
             .putBoolean(KEY_DEV, next.developerMode)
+            .putBoolean(KEY_VOICE, next.voiceCommands)
             .apply()
     }
 
@@ -33,5 +35,6 @@ class SettingsStore(context: Context) {
         const val KEY_STEP = "step_length_m"
         const val KEY_RATE = "speech_rate"
         const val KEY_DEV = "developer_mode"
+        const val KEY_VOICE = "voice_commands"
     }
 }

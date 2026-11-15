@@ -17,7 +17,11 @@ import com.genvision.nova.core.nav.NavState
 import com.genvision.nova.core.nav.NavigationMachine
 import com.genvision.nova.core.sighting.SightingFilter
 import com.genvision.nova.core.speech.Phrases
+import com.genvision.nova.core.voice.VoiceCommand
+import com.genvision.nova.core.voice.VoiceCommandParser
 import com.genvision.nova.log.EventLog
+import com.genvision.nova.voice.VoiceListener
+import com.genvision.nova.voice.VoiceProblem
 import com.genvision.nova.settings.Settings
 import com.genvision.nova.settings.SettingsStore
 import com.genvision.nova.speech.AndroidSpeaker
@@ -51,6 +55,10 @@ data class UiState(
     val settingsOpen: Boolean = false,
     /** Marker analysis frames per second, shown in the developer panel. */
     val analysisRate: Double = 0.0,
+    /** True when voice commands are switched on AND this phone can recognise speech offline. */
+    val voiceReady: Boolean = false,
+    /** True when this phone can recognise speech offline at all (shown in Settings). */
+    val voiceAvailable: Boolean = false,
     /** Latest detections for the developer overlay (null when none). */
     val overlay: FrameResult? = null,
     val settings: Settings = Settings(),
@@ -72,6 +80,9 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
     private val log = EventLog(File(app.filesDir, "logs"), Config.LOG_MAX_BYTES)
     private val machine = NavigationMachine(SystemClockSource) { settingsStore.settings.value.stepLengthM }
     private var speaker: Speaker = createSpeaker()
+    private val voiceAvailable = VoiceListener.isAvailable(app)
+    /** Set by the activity: whether the camera permission is granted right now. */
+    var hasCameraPermission: () -> Boolean = { false }
 
     // TalkBack (touch exploration) state, so the app's speech never talks over it.
     private val accessibilityManager = app.getSystemService(AccessibilityManager::class.java)
@@ -182,6 +193,68 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
         filter.onFrame(markerIds, SystemClockSource.nowMs()).forEach { dispatch(NavEvent.Sighting(it)) }
     }
 
+    // ---- Voice commands (stretch goal) ----
+
+    /** Call just before the microphone starts, so the phone's own speech does not get recorded. */
+    fun beforeListening() {
+        speaker.stop()
+        log.log("voice_listen")
+    }
+
+    fun onVoiceProblem(problem: VoiceProblem) {
+        log.log("voice_problem", mapOf("kind" to problem.name))
+        say(
+            when (problem) {
+                VoiceProblem.NEEDS_PERMISSION -> Phrases.VOICE_NEEDS_MICROPHONE
+                VoiceProblem.NOT_AVAILABLE -> Phrases.VOICE_NOT_AVAILABLE
+                VoiceProblem.DID_NOT_HEAR, VoiceProblem.OTHER -> Phrases.VOICE_NOT_UNDERSTOOD
+            },
+        )
+    }
+
+    /** What the recogniser heard (best guess first). Does the same as the matching button. */
+    fun onVoiceHeard(alternatives: List<String>) {
+        val data = loaded ?: return
+        val command = VoiceCommandParser(data.map.destinations).parseFirst(alternatives)
+        log.log("voice_heard", mapOf("heard" to (alternatives.firstOrNull() ?: ""), "command" to (command?.toString() ?: "none")))
+        val state = machine.state
+        val guiding = state == NavState.WAITING || state == NavState.GUIDING
+        when (command) {
+            null -> say(Phrases.VOICE_NOT_UNDERSTOOD)
+            is VoiceCommand.GoTo -> when (state) {
+                NavState.HOME -> chooseDestination(command.destinationId, hasCameraPermission())
+                NavState.ARRIVED -> {
+                    chooseAnother()
+                    chooseDestination(command.destinationId, hasCameraPermission())
+                }
+                else -> say(if (guiding) Phrases.VOICE_STOP_FIRST else Phrases.VOICE_NOT_UNDERSTOOD)
+            }
+            VoiceCommand.Repeat -> when {
+                state == NavState.GUIDING -> repeat()
+                state == NavState.WAITING -> say(Phrases.VOICE_NO_INSTRUCTION_YET)
+                else -> say(Phrases.VOICE_NOT_GUIDING)
+            }
+            VoiceCommand.WhereAmI -> if (guiding) whereAmI() else say(Phrases.VOICE_NOT_GUIDING)
+            VoiceCommand.Stop -> if (guiding) stop() else say(Phrases.VOICE_NOT_GUIDING)
+            VoiceCommand.ChooseAnother -> when {
+                state == NavState.ARRIVED -> chooseAnother()
+                guiding -> stop()
+                else -> say(Phrases.VOICE_NOT_GUIDING)
+            }
+        }
+    }
+
+    /** Developer panel: type a command instead of speaking it. Uses exactly the same path. */
+    fun typedCommand(text: String) = onVoiceHeard(listOf(text))
+
+    /** A destination from a link, shortcut or voice assistant. Ignored unless it is in map.json. */
+    fun destinationIsKnown(id: String) = loaded?.map?.destinations?.contains(id) == true
+
+    private fun say(text: String) {
+        apply(Action.Speak(text))
+        publish()
+    }
+
     fun onCameraError(message: String) = dispatch(NavEvent.ErrorOccurred(ErrorKind.CAMERA, message))
     fun onAnalysisRate(rate: Double) { analysisRate = rate; publish() }
     fun logCamera(event: String) = log.log(event)
@@ -253,6 +326,8 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
                 requestPermission = requestPermission,
                 settingsOpen = settingsOpen,
                 analysisRate = analysisRate,
+                voiceReady = voiceAvailable && settingsStore.settings.value.voiceCommands,
+                voiceAvailable = voiceAvailable,
                 overlay = overlay,
                 settings = settingsStore.settings.value,
                 markerIds = data?.markers?.markers?.map { it.id }?.sorted() ?: emptyList(),

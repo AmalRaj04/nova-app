@@ -8,6 +8,8 @@ data class Settings(
     val stepLengthM: Double = Config.WALKING_STEP_LENGTH_M,
     val speechRate: Double = Config.SPEECH_RATE,
     val developerMode: Boolean = Config.DEVELOPER_MODE,
+    /** Stretch goal: spoken commands. Off by default; the buttons always stay. */
+    val voiceCommands: Boolean = false,
 ) {
     fun withStepLength(m: Double) = copy(stepLengthM = round(m.coerceIn(STEP_MIN, STEP_MAX), 100.0))
     fun withSpeechRate(r: Double) = copy(speechRate = round(r.coerceIn(RATE_MIN, RATE_MAX), 10.0))

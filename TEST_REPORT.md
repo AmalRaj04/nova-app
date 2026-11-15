@@ -6,8 +6,8 @@ Date of the runs: 15 November 2026. Everything below was run on a Mac with an An
 
 | Command | What it covers | Result |
 | --- | --- | --- |
-| `./gradlew test` | `:core`: 73 tests. Map loading and each data check, bearings and turn angles, turn words and their boundaries, routing, golden spoken text, rounding and summing of steps, hints, the sighting filter, and every row 1 to 22 of the state table with a fake clock (reminders at 12, 27, 42 s and help at 57 s, going back, off route, behind you, errors and Retry, background and foreground) | 73 passed |
-| `./gradlew test` | `:app` plain-Kotlin tests: 29 tests. Settings limits, event log format and rotation, frame throttle, rate meter, stride-aware luminance copy, marker size and overlay maths, speech routing in every state both ways, colour contrast at least 7 to 1 | 29 passed |
+| `./gradlew test` | `:core`: 83 tests (including 10 for the voice command parser). Map loading and each data check, bearings and turn angles, turn words and their boundaries, routing, golden spoken text, rounding and summing of steps, hints, the sighting filter, and every row 1 to 22 of the state table with a fake clock (reminders at 12, 27, 42 s and help at 57 s, going back, off route, behind you, errors and Retry, background and foreground) | 83 passed |
+| `./gradlew test` | `:app` plain-Kotlin tests: 32 tests (including the deep link). Settings limits, event log format and rotation, frame throttle, rate meter, stride-aware luminance copy, marker size and overlay maths, speech routing in every state both ways, colour contrast at least 7 to 1 | 32 passed |
 | `./gradlew connectedDebugAndroidTest` | 6 OpenCV tests on an emulator: reads marker IDs 0 to 10 from generated images, a rotated marker, a blank image finds nothing, works again after release, minimum size limit, frames of different sizes | 6 passed (run at the end of Step 7) |
 | `./gradlew lintDebug` | Android lint | Warnings only, no errors (portrait lock, backup attribute) |
 | `./gradlew assembleDebug`, `assembleRelease` | Both build. Release APK is unsigned, about 144 MB | Built |
@@ -27,6 +27,18 @@ Date of the runs: 15 November 2026. Everything below was run on a Mac with an An
 | OpenCV on live frames | Ran on emulator camera frames without crashing. The virtual scene has no ArUco marker, so "Markers in view: none". |
 | TalkBack (the emulator's built-in) | With TalkBack on, the Home prompt and "Guidance stopped." went through the accessibility system and guidance speech used the app's own speech (confirmed in the log, `via=accessibility`). |
 | 200 percent font | Home, Guidance and Settings show no clipped text. |
+
+## Voice commands and deep link (stretch goal, added after Step 9)
+
+| Check | Result |
+| --- | --- |
+| Command parser (`go to D13`, `D thirteen`, `dee one three`, `13`, repeat, where am I, stop, choose another, stop beats a room name, two rooms not guessed, unknown room, noise, rooms read from the map) | 10 unit tests pass |
+| `nova://destination/<room>` parsing | 3 unit tests pass |
+| Opening `nova://destination/D13` on the emulator | Passed: guidance to D13 started by itself once Home was ready. One shortcut per room was created from `map.json`. |
+| "Voice commands" switch in Settings, "Speak a command" button on Home and Guidance | Seen working on the emulator. |
+| Pressing "Speak a command" with the microphone allowed | The emulator had no offline speech pack, so listening ended with "Voice commands are not available on this phone. Please use the buttons." No crash. This tests the failure path only. |
+| Typed commands in the developer panel | **Not verified.** My scripted typing did not reach the text box (the app logged empty commands and answered "I did not understand"), and the emulator then became unreliable. The wiring from the box to the command handler ran, but a typed "go to D13" was not seen working on a device. |
+| Real speech recognition, Volume up as the talk key, the microphone permission prompt, a real voice assistant ("Hey Google") | **Not tested.** |
 
 ## 15-minute run
 

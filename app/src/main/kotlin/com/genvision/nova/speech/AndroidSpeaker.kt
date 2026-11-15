@@ -72,6 +72,12 @@ class AndroidSpeaker(context: Context, private val onError: (String) -> Unit) : 
         tts?.speak(r.text, mode, null, id)
     }
 
+    override fun stop() {
+        pending.clear()
+        protectedId = null
+        tts?.stop()
+    }
+
     override fun setRate(rate: Float) {
         this.rate = rate
         if (ready) tts?.setSpeechRate(rate)

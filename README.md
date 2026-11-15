@@ -101,6 +101,31 @@ The event log is a text file (`logs/nova.log` in the app's private storage, rota
 5. Choose D13, press 0 and wait. Reminders come at 12, 27 and 42 seconds, the help message at 57.
 6. Press Repeat, Where am I and Stop at each stage and listen.
 
+## Voice commands and "Hey Google" (optional, off by default)
+
+Buttons always work and always stay. Voice is an extra for people who cannot easily find the buttons.
+
+**Voice commands.** In *Settings*, turn on **Voice commands**. The switch is only usable on a phone that can recognise speech **offline** (Android 13 or newer with the offline speech pack installed); NOVA never uses an online recogniser, so it stays offline. When it is on:
+
+- a **Speak a command** button appears on the Home and Guidance screens, and
+- the **Volume up** key starts listening, so it can be found without looking. (While voice commands are on, Volume up no longer raises the volume; use Volume down or the phone's volume panel.)
+
+After a short beep, say one of these:
+
+| Say | Does the same as |
+| --- | --- |
+| "go to D13" (also "D 13", "D thirteen", "13"), or any room in `map.json` | the Go to D13 button |
+| "repeat" or "say again" | Repeat |
+| "where am I" | Where am I |
+| "stop" | Stop |
+| "choose another" or "go home" | Choose another destination |
+
+If NOVA does not understand it says so and lists what to say. The first time, the phone asks for the **microphone** permission (RECORD_AUDIO); NOVA asks for it only when you use voice, and never records or stores audio.
+
+**"Hey Google".** Saying "Hey Google, open NOVA" opens the app by its name. NOVA also understands the link `nova://destination/D13` (any room in `map.json`), and publishes one app shortcut per room, so a voice assistant, a launcher shortcut or an NFC tag can start guidance straight away. Whether a given phone's assistant can use those shortcuts depends on that phone and has not been tested.
+
+In developer mode there is a text box where you can **type a command** instead of speaking it. It follows exactly the same path as speech, so the team can check the wording without a microphone.
+
 ## Print the markers
 
 The app reads `DICT_4X4_50` markers, IDs 0 to 10. The tool needs Python 3 with OpenCV:
@@ -165,3 +190,4 @@ Gradle 9.9.1, Android Gradle Plugin 9.5.1, Kotlin 2.4.21, kotlinx.serialization 
 - Reading a printed marker with a real camera, marker reading range, battery and heat, a real phone, and TalkBack with a real user have **not** been tested.
 - On the emulator, TalkBack's first focus on a screen does not always land on the screen title. This needs checking on a real phone.
 - The debug APK is about 148 MB because of OpenCV.
+- Voice commands and the "Hey Google" shortcuts have not been tried with real speech or a real assistant: the emulator had no offline speech pack, so listening ended with "Voice commands are not available on this phone".
