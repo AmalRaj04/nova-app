@@ -41,10 +41,13 @@ class CameraSession(
     /** Bumped on every start/stop so a slow start can notice it has been cancelled. */
     private var token = 0
     private var grayBuffer = ByteArray(0)
+    /** Set after the first analysis error so a failing camera reports once, not once per frame. */
+    @Volatile private var analysisFailed = false
 
     /** Starts (or restarts) the camera, tied to [owner]'s lifecycle. */
     fun start(owner: LifecycleOwner, previewSurface: Preview.SurfaceProvider?) {
         val myToken = ++token
+        analysisFailed = false
         val future = ProcessCameraProvider.getInstance(context)
         future.addListener({
             if (myToken != token) return@addListener // stopped while the camera was starting
@@ -110,7 +113,10 @@ class CameraSession(
             mainExecutor.execute { onResult(result) }
             meter.onFrame(now)?.let { rate -> mainExecutor.execute { onRate(rate) } }
         } catch (e: Exception) {
-            mainExecutor.execute { onError("The camera stopped working: ${e.message ?: "unknown problem"}") }
+            if (!analysisFailed) {
+                analysisFailed = true
+                mainExecutor.execute { onError("The camera stopped working: ${e.message ?: "unknown problem"}") }
+            }
         } finally {
             image.close() // always, or the camera stops delivering frames
         }

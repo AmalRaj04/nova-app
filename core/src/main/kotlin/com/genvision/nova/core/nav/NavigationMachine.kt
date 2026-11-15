@@ -299,7 +299,14 @@ class NavigationMachine(
     }
 
     // Row 20
-    private fun onError(e: NavEvent.ErrorOccurred, out: MutableList<Action>) = raiseError(e.kind, e.message, out)
+    private fun onError(e: NavEvent.ErrorOccurred, out: MutableList<Action>) {
+        // While an error is already showing, later ones (for example one per failed camera frame)
+        // would only repeat the same speech.
+        if (state == NavState.ERROR) return
+        // A camera error that arrives after the camera was stopped is a late echo, not news.
+        if (e.kind == ErrorKind.CAMERA && !guiding) return
+        raiseError(e.kind, e.message, out)
+    }
 
     private fun raiseError(kind: ErrorKind, message: String, out: MutableList<Action>) {
         if (state != NavState.ERROR) stateBeforeError = state

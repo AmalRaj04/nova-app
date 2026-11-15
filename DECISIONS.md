@@ -96,3 +96,7 @@ Run: `./gradlew test assembleDebug` (71 `:core` and 29 `:app` unit tests pass). 
 | 9. Every state change is spoken | Added speech for the permission request and Retry; all other rows already spoke. |
 
 Not run: a real phone, a real TalkBack user, how speech sounds, 200 percent on Arrival and Error.
+
+- Step 9: While an error screen is showing, further errors are ignored (otherwise a failing camera would repeat the same spoken error for every frame), and a camera error that arrives when guidance is not running is ignored. The camera session reports an analysis failure once.
+- Step 9: Lint reports warnings only. The portrait lock is kept on purpose (the brief asks for portrait); Android 16 and later may ignore it on large screens, which does not matter for phones.
+- Step 9: The 15-minute emulator run was disturbed by hand use of the emulator and is recorded in TEST_REPORT.md as not a valid unattended run. Battery and heat were not measured. The README and TEST_REPORT.md are written; the README steps were written from the commands that were run, but not followed from scratch by a new person.

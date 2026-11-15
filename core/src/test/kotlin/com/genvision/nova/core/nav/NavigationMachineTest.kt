@@ -296,6 +296,21 @@ class NavigationMachineTest {
         assertEquals(GUIDING, machine.state)
     }
 
+    @Test fun repeatedErrorsWhileShowingAnErrorAreIgnored() {
+        loaded(); choose("D13"); sight(0)
+        send(NavEvent.ErrorOccurred(ErrorKind.CAMERA, "The camera stopped."))
+        assertEquals(emptyList(), send(NavEvent.ErrorOccurred(ErrorKind.CAMERA, "The camera stopped.")))
+        assertEquals(emptyList(), send(NavEvent.ErrorOccurred(ErrorKind.SPEECH, "No voice.")))
+        assertEquals(ERROR, machine.state)
+    }
+
+    @Test fun lateCameraErrorAfterStopIsIgnored() {
+        loaded(); choose("D13"); sight(0)
+        send(NavEvent.StopPressed)
+        assertEquals(emptyList(), send(NavEvent.ErrorOccurred(ErrorKind.CAMERA, "The camera stopped.")))
+        assertEquals(HOME, machine.state)
+    }
+
     @Test fun row21_dataErrorRetryGoesBackToLoading() {
         send(NavEvent.DataLoaded(LoadResult.Failure(listOf("Bad."))))
         val r = send(NavEvent.RetryPressed)
