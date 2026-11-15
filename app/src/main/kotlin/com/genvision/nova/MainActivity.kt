@@ -73,6 +73,15 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // Messages routed to the accessibility system, so TalkBack reads them in its own turn.
+        val view = androidx.compose.ui.platform.LocalView.current
+        LaunchedEffect(Unit) {
+            vm.announcements.collect {
+                @Suppress("DEPRECATION")
+                view.announceForAccessibility(it)
+            }
+        }
+
         // Start and stop the camera with the machine's wishes; also restart it after Retry.
         val cameraActive by vm.cameraActive.collectAsStateWithLifecycle()
         val generation by vm.cameraGeneration.collectAsStateWithLifecycle()

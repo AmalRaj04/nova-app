@@ -13,6 +13,9 @@ object Phrases {
     const val HELP_AFTER_REMINDERS = "Still no marker. Press Repeat, or ask someone nearby for help."
     const val WHERE_AM_I_NOTHING = "No marker seen yet."
     const val GUIDANCE_STOPPED = "Guidance stopped."
+    const val ASKING_CAMERA_PERMISSION =
+        "NOVA needs to use the camera to read markers. Please allow it when asked."
+    const val RETRYING = "Trying again."
     const val PERMISSION_DENIED =
         "NOVA needs the camera to read markers. Please allow the camera in settings."
 

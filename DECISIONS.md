@@ -74,3 +74,25 @@ Run: `./gradlew test assembleDebug` (71 `:core` tests, 21 `:app` unit tests incl
 - Seen working: the app runs with OpenCV analysing live emulator camera frames (the panel shows "Markers in view: none" because the virtual scene has no marker), with no crash. Analysis ran at about 1.3 frames per second on the slow emulator; that is not a measure of a real phone.
 - Not run: reading a printed marker live with a real camera (needed for the "a printed marker is read live" acceptance), the farthest reading distance for each marker, a real phone, speed on real hardware. Step 7 is therefore not fully accepted until the team prints markers and checks them with the developer panel.
 - Fixed during testing: the detector crashed on an image with no markers until the empty `ids` case was handled.
+- Step 8: Speech routing (accessibility requirement 7). While guiding (WAITING or GUIDING) the app's own text-to-speech is always used. On every other screen, when TalkBack (touch exploration) is on, messages go to the accessibility system (`announceForAccessibility`) so TalkBack and the app do not talk over each other; with TalkBack off, the app's own speech is used everywhere. This includes the arrival message: with TalkBack on it is announced through the accessibility system (so it is not protected from interruption in that case), because the Arrival screen is read by TalkBack. The log line for such messages carries `via=accessibility`. The rule is the pure function `SpeechRouting.route`, unit tested for every state both ways.
+- Step 8: Rule 9 (every state change is spoken): asking for camera permission now speaks "NOVA needs to use the camera to read markers. Please allow it when asked." and Retry speaks "Trying again." Opening and closing the Settings screen is not in the state table and is not spoken by the app; TalkBack reads that screen.
+- Step 8: Colours are plain numbers in `Palette`, and a unit test checks that white on black, black on yellow, white on dark grey and the overlay green on black are all at least 7 to 1.
+- Step 8: Each screen sets a pane title (its title text) and a heading, and the developer overlay drawing is hidden from TalkBack (its IDs are also in text above it).
+
+## Step 8 accessibility notes
+
+Run: `./gradlew test assembleDebug` (71 `:core` and 29 `:app` unit tests pass). Checked on an Android emulator (API 36) with its built-in TalkBack and with the system font at 200%.
+
+| Requirement | Result |
+| --- | --- |
+| 1. Labels and roles, no icon-only buttons | Every control has a text label; the switch is a labelled switch. Not read aloud by a real TalkBack user. |
+| 2. Buttons at least 72 dp, full width | Main buttons set to at least 72 dp (Repeat 160 dp). Developer marker buttons are 56 dp. Seen on screen only. |
+| 3. Contrast at least 7 to 1 | Passed in a unit test for all colour pairs in use. |
+| 4. Font follows system, usable at 200 percent | Checked at 200 percent: Home, Guidance and Settings screens show no clipped text; Repeat, Where am I and Stop all fit on screen on Guidance, and Settings scrolls. The Arrival and Error screens were not looked at at 200 percent. |
+| 5. Nothing time-limited, no swipe or long press needed | Nothing is timed. The Settings and developer pages scroll when text is large. |
+| 6. Logical focus order, first focus is the title | NOT met on the emulator. TalkBack's first focus sometimes landed on the text under the title instead (seen on Home after a cold start and on Guidance), even with pane titles set. Needs a check on a real phone with a TalkBack user; a different approach may be needed. |
+| 7. TalkBack and own speech do not overlap | Checked both ways in the log: TalkBack off, everything uses own speech; TalkBack on, the Home prompt and "Guidance stopped." go through the accessibility system, while "Going to D13...", reminders and instructions use own speech. Audio was off, so actual overlap was not heard. |
+| 8. Screen stays on while guiding | Done in Step 5 (window flag); not measured over time. |
+| 9. Every state change is spoken | Added speech for the permission request and Retry; all other rows already spoke. |
+
+Not run: a real phone, a real TalkBack user, how speech sounds, 200 percent on Arrival and Error.

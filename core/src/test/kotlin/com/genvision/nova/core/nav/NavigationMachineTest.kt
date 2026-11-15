@@ -63,6 +63,7 @@ class NavigationMachineTest {
         loaded()
         val a = send(NavEvent.DestinationChosen("D13", cameraPermissionGranted = false))
         assertTrue(Action.RequestPermission in a)
+        assertEquals(listOf(Phrases.ASKING_CAMERA_PERMISSION), a.texts()) // rule 9: speak every state change
         assertEquals(PERMISSION, machine.state)
     }
 
@@ -291,14 +292,14 @@ class NavigationMachineTest {
         assertEquals(listOf("The camera stopped."), a.texts())
         assertEquals(ERROR, machine.state)
         val r = send(NavEvent.RetryPressed)
-        assertEquals(listOf(Action.RetryStep(ErrorKind.CAMERA)), r)
+        assertEquals(listOf(Action.Speak(Phrases.RETRYING), Action.RetryStep(ErrorKind.CAMERA)), r)
         assertEquals(GUIDING, machine.state)
     }
 
     @Test fun row21_dataErrorRetryGoesBackToLoading() {
         send(NavEvent.DataLoaded(LoadResult.Failure(listOf("Bad."))))
         val r = send(NavEvent.RetryPressed)
-        assertEquals(listOf(Action.RetryStep(ErrorKind.DATA)), r)
+        assertEquals(listOf(Action.Speak(Phrases.RETRYING), Action.RetryStep(ErrorKind.DATA)), r)
         assertEquals(LOADING, machine.state)
         loaded()
         assertEquals(HOME, machine.state)

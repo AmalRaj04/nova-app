@@ -31,12 +31,14 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import com.genvision.nova.camera.MarkerGeometry
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.camera.view.PreviewView
 import androidx.compose.ui.viewinterop.AndroidView
 import com.genvision.nova.NovaViewModel
@@ -50,6 +52,10 @@ private fun Page(title: String, content: @Composable () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.systemBars)
+            // Accessibility requirement 6: a pane title tells TalkBack that a new screen has
+            // appeared, so it starts again from the top (the title) instead of keeping its
+            // place from the previous screen.
+            .semantics { paneTitle = title }
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -191,7 +197,8 @@ fun DevPanel(ui: UiState, onSimulate: (Int) -> Unit, onExportLog: () -> Unit, on
             onRelease = { onPreviewView(null) },
             modifier = Modifier.matchParentSize(),
         )
-        MarkerOverlay(ui.overlay)
+        // The IDs are also given as text above, so the drawing is hidden from TalkBack.
+        MarkerOverlay(ui.overlay, Modifier.clearAndSetSemantics { })
         }
         ui.markerIds.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -212,10 +219,10 @@ fun DevPanel(ui: UiState, onSimulate: (Int) -> Unit, onExportLog: () -> Unit, on
 
 /** Boxes and IDs around the markers found in the latest frame (developer panel only). */
 @Composable
-private fun MarkerOverlay(result: com.genvision.nova.camera.FrameResult?) {
+private fun MarkerOverlay(result: com.genvision.nova.camera.FrameResult?, modifier: Modifier = Modifier) {
     val measurer = rememberTextMeasurer()
-    val boxColor = Color(0xFF00E676)
-    Canvas(modifier = Modifier.fillMaxSize()) {
+    val boxColor = Color(Palette.GREEN)
+    Canvas(modifier = modifier.fillMaxSize()) {
         val r = result ?: return@Canvas
         for (marker in r.markers) {
             val pts = marker.corners.map {

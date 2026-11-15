@@ -23,17 +23,16 @@ import androidx.compose.ui.unit.sp
  * One fixed high-contrast theme: white on black (21:1) and black on yellow (about 14:1).
  * No dynamic colour. Meaning is never carried by colour alone: every control has a text label.
  */
-private val Black = Color(0xFF000000)
-private val White = Color(0xFFFFFFFF)
-private val Yellow = Color(0xFFFFD60A)
-private val DarkGrey = Color(0xFF1C1C1C)
+private val Black = Color(Palette.BLACK)
+private val White = Color(Palette.WHITE)
+private val Yellow = Color(Palette.YELLOW)
+private val DarkGrey = Color(Palette.DARK_GREY)
 
 private val NovaColors = darkColorScheme(
     primary = Yellow, onPrimary = Black,
     secondary = DarkGrey, onSecondary = White,
     background = Black, onBackground = White,
     surface = Black, onSurface = White,
-    error = Color(0xFFFF8A80), onError = Black,
 )
 
 @Composable

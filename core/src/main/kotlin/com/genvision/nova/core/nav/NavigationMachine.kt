@@ -130,6 +130,7 @@ class NavigationMachine(
         } else {
             pendingDestination = e.destinationId
             state = NavState.PERMISSION
+            out += Action.Speak(Phrases.ASKING_CAMERA_PERMISSION)
             out += Action.RequestPermission
         }
     }
@@ -317,6 +318,7 @@ class NavigationMachine(
             else -> NavState.HOME
         }
         if (guiding) resetTimer()
+        out += Action.Speak(Phrases.RETRYING)
         out += Action.RetryStep(failedKind)
     }
 

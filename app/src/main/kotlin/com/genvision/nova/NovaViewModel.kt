@@ -22,6 +22,11 @@ import com.genvision.nova.settings.Settings
 import com.genvision.nova.settings.SettingsStore
 import com.genvision.nova.speech.AndroidSpeaker
 import com.genvision.nova.speech.Speaker
+import com.genvision.nova.speech.SpeechRoute
+import com.genvision.nova.speech.SpeechRouting
+import android.view.accessibility.AccessibilityManager
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,6 +72,14 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
     private val log = EventLog(File(app.filesDir, "logs"), Config.LOG_MAX_BYTES)
     private val machine = NavigationMachine(SystemClockSource) { settingsStore.settings.value.stepLengthM }
     private var speaker: Speaker = createSpeaker()
+
+    // TalkBack (touch exploration) state, so the app's speech never talks over it.
+    private val accessibilityManager = app.getSystemService(AccessibilityManager::class.java)
+    private var touchExploration = accessibilityManager?.isTouchExplorationEnabled == true
+    private val touchListener = AccessibilityManager.TouchExplorationStateChangeListener { touchExploration = it }
+    private val announcementChannel = Channel<String>(Channel.BUFFERED)
+    /** Messages to hand to the accessibility system (read by the activity). */
+    val announcements = announcementChannel.receiveAsFlow()
     private var loaded: LoadedData? = null
     private var filter = SightingFilter({ null })
 
@@ -94,6 +107,7 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
     private var settingsOpen = false
 
     init {
+        accessibilityManager?.addTouchExplorationStateChangeListener(touchListener)
         log.log("app_start", mapOf("version" to "1"))
         speaker.setRate(settingsStore.settings.value.speechRate.toFloat())
         viewModelScope.launch { log.tail.collect { publish() } }
@@ -187,9 +201,15 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun apply(action: Action) {
         when (action) {
-            is Action.Speak -> {
-                log.log("speak", mapOf("text" to action.text))
-                speaker.speak(action.text, action.interrupt, action.protected)
+            is Action.Speak -> when (SpeechRouting.route(touchExploration, machine.state)) {
+                SpeechRoute.OWN_SPEECH -> {
+                    log.log("speak", mapOf("text" to action.text))
+                    speaker.speak(action.text, action.interrupt, action.protected)
+                }
+                SpeechRoute.ACCESSIBILITY -> {
+                    log.log("speak", mapOf("text" to action.text, "via" to "accessibility"))
+                    announcementChannel.trySend(action.text)
+                }
             }
             Action.StartCamera -> { filter.reset(); cameraWanted = true; cameraPaused = false; updateCamera() }
             Action.StopCamera -> { cameraWanted = false; updateCamera() }
@@ -242,6 +262,7 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        accessibilityManager?.removeTouchExplorationStateChangeListener(touchListener)
         speaker.shutdown()
     }
 }
