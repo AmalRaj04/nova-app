@@ -35,3 +35,16 @@ Defaults chosen for the open questions in NOVA_APP_SPEC.md. Each can change in d
   - Added a `BackPressed` event for the Error screen's Back button (goes to HOME).
   - The machine does not emit timer actions: it keeps its own timer using `Clock`, and the caller sends `Tick` about once a second.
   - Speak actions carry `interrupt` and `protected` flags so the speaker can keep arrival uninterrupted (FR-16).
+- Step 5: Android shell built with Compose. Settings use SharedPreferences (allowed by the brief). `compileSdk` and `targetSdk` are 37, because the current stable Compose and AndroidX libraries require it; Gradle downloaded SDK platform 37. `gradle.properties` raises Gradle memory to 3 GB because the Compose build ran out of memory at the default.
+- Step 5: Screen orientation is locked to portrait for the whole app (the brief asks for portrait while guiding).
+- Step 5: The camera actions (`StartCamera` and others) only set a `cameraActive` flag in the ViewModel for now; the real camera arrives in Step 6. The developer panel has no camera preview yet and says so.
+- Step 5: The ready prompt is spoken through the app's own text-to-speech. The rule that avoids talking over TalkBack (accessibility requirement 7) is left for Step 8.
+
+## Step 5 test note
+
+Run: `./gradlew test assembleDebug` (all pass: 71 `:core` tests, 7 `:app` tests for settings and the log). Ran the app on an Android emulator (API 36, no audio).
+
+- Manual check 1 (D13, markers 0, 2, 4, 6, 7, 8, 10): passed. The log shows each spoken text equal to the golden table and ends with the arrival message.
+- Reminder timing, Repeat, Where am I and Stop: seen working in the log (first reminder 12.2 s after the start prompt). Checks 2 to 5 as a full sequence were not cleanly repeated on the emulator, because the emulator was slow and my scripted taps missed some buttons. Those behaviours are covered by the `:core` state machine tests.
+- Not run: real speech audio (the emulator had audio off; the app did start text-to-speech without an error), a real phone, TalkBack, a real camera.
+- Fixed during testing: text was black on black until the theme got a background surface; the title sat under the status bar until system-bar padding was added.
