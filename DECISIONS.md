@@ -22,3 +22,4 @@ Defaults chosen for the open questions in NOVA_APP_SPEC.md. Each can change in d
 ## Build decisions
 
 - Step 0: Gradle 9.9.1, AGP 9.5.1, Kotlin 2.4.21 (latest stable found on 2026-11-15). The machine has only JDK 23, so `:core` targets JVM 17 bytecode without a toolchain.
+- Step 1: `MapLoader` returns all data-check errors at once (not just the first) so the team can fix a file in one pass. Optional node field `spoken` is already in the model for speech-only names.
