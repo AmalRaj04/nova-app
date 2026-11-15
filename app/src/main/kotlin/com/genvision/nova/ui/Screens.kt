@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -28,6 +29,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.semantics.role
+import androidx.camera.view.PreviewView
+import androidx.compose.ui.viewinterop.AndroidView
 import com.genvision.nova.NovaViewModel
 import com.genvision.nova.UiState
 import com.genvision.nova.settings.Settings
@@ -72,13 +75,13 @@ fun HomeScreen(ui: UiState, onChoose: (String) -> Unit, onSettings: () -> Unit, 
     }
 
 @Composable
-fun GuidanceScreen(ui: UiState, vm: NovaViewModel, onExportLog: () -> Unit) =
+fun GuidanceScreen(ui: UiState, vm: NovaViewModel, onExportLog: () -> Unit, onPreviewView: (PreviewView?) -> Unit) =
     Page("Going to ${ui.destinationName}") {
         Text(ui.guidanceText, fontSize = 30.sp, lineHeight = 38.sp)
         BigButton("Repeat", onClick = vm::repeat, minHeight = 160.dp, textSize = 36)
         BigButton("Where am I", onClick = vm::whereAmI, minHeight = 96.dp, primary = false)
         BigButton("Stop", onClick = vm::stop, minHeight = 96.dp, primary = false)
-        if (ui.settings.developerMode) DevPanel(ui, vm::simulateSighting, onExportLog)
+        if (ui.settings.developerMode) DevPanel(ui, vm::simulateSighting, onExportLog, onPreviewView)
     }
 
 @Composable
@@ -161,11 +164,23 @@ private const val ABOUT_TEXT =
 
 /** Developer panel (FR-18, FR-19): simulate sightings, see state and the log. */
 @Composable
-fun DevPanel(ui: UiState, onSimulate: (Int) -> Unit, onExportLog: () -> Unit) {
+fun DevPanel(ui: UiState, onSimulate: (Int) -> Unit, onExportLog: () -> Unit, onPreviewView: (PreviewView?) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Developer panel", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
         Text("State: ${ui.navState}. Current place: ${ui.currentPlace}.", fontSize = 18.sp)
-        Text("Camera preview and marker boxes arrive with the camera steps.", fontSize = 16.sp)
+        Text("Analysis rate: %.1f frames per second".format(ui.analysisRate), fontSize = 18.sp)
+        Text("Marker detection is not connected yet (OpenCV comes in Step 7), so the camera finds no markers.", fontSize = 16.sp)
+        AndroidView(
+            factory = {
+                // COMPATIBLE uses a TextureView, which respects Compose layout and clipping.
+                PreviewView(it).apply {
+                    implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                    scaleType = PreviewView.ScaleType.FIT_CENTER
+                }.also(onPreviewView)
+            },
+            onRelease = { onPreviewView(null) },
+            modifier = Modifier.fillMaxWidth().height(240.dp).clipToBounds(),
+        )
         ui.markerIds.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 row.forEach { id ->

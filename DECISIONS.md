@@ -48,3 +48,15 @@ Run: `./gradlew test assembleDebug` (all pass: 71 `:core` tests, 7 `:app` tests 
 - Reminder timing, Repeat, Where am I and Stop: seen working in the log (first reminder 12.2 s after the start prompt). Checks 2 to 5 as a full sequence were not cleanly repeated on the emulator, because the emulator was slow and my scripted taps missed some buttons. Those behaviours are covered by the `:core` state machine tests.
 - Not run: real speech audio (the emulator had audio off; the app did start text-to-speech without an error), a real phone, TalkBack, a real camera.
 - Fixed during testing: text was black on black until the theme got a background surface; the title sat under the status bar until system-bar padding was added.
+- Step 6: CameraX 1.6.2 (`camera-core`, `camera2`, `lifecycle`, `view`). The camera is bound to the activity's lifecycle, so CameraX itself stops it when the app goes to the background and restarts it on return. The machine's pause and resume actions still stop reminders during that time.
+- Step 6: `Preview` is bound only in developer mode, using the compatible (TextureView) mode because the default SurfaceView drew outside its box in the developer panel.
+- Step 6: Frame throttling, the rate meter and the stride-aware luminance copy are small plain classes in `FrameMath.kt` with unit tests. Detection still uses `FakeMarkerDetector`, which finds nothing, until Step 7.
+- Step 6: The `camera_start` line may appear twice on entering guidance in developer mode, because the camera is restarted once the preview surface exists. This is harmless.
+
+## Step 6 test note
+
+Run: `./gradlew test assembleDebug` (all pass: 71 `:core` tests, 13 `:app` tests including throttle, rate meter and stride copy). Ran the app on an Android emulator with its virtual camera.
+
+- Seen working: the camera starts when guidance starts, the developer panel shows the live preview and an analysis rate (2.7 to 5.6 frames per second on the slow emulator, against a limit of about 6.7), and after pressing Home and reopening the app the preview and rate come back.
+- Not run: a real phone camera, camera error and Retry on a device, camera permission denied on a device, the 1280 by 720 resolution on real hardware, battery and heat.
+- Fixed during testing: the preview drew over the developer panel text until it used the compatible mode.

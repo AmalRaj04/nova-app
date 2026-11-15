@@ -43,6 +43,8 @@ data class UiState(
     val showSettingsButton: Boolean = false,
     val requestPermission: Boolean = false,
     val settingsOpen: Boolean = false,
+    /** Marker analysis frames per second, shown in the developer panel. */
+    val analysisRate: Double = 0.0,
     val settings: Settings = Settings(),
     val markerIds: List<Int> = emptyList(),
     val logLines: List<String> = emptyList(),
@@ -71,6 +73,10 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
     private val _cameraActive = MutableStateFlow(false)
     /** True while the camera should run (WAITING or GUIDING, and the app is in the foreground). */
     val cameraActive: StateFlow<Boolean> = _cameraActive
+    private val _cameraGeneration = MutableStateFlow(0)
+    /** Bumped by Retry after a camera error so the camera is started again. */
+    val cameraGeneration: StateFlow<Int> = _cameraGeneration
+    private var analysisRate = 0.0
     private var cameraWanted = false
     private var cameraPaused = false
 
@@ -148,6 +154,10 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
         filter.onFrame(markerIds, SystemClockSource.nowMs()).forEach { dispatch(NavEvent.Sighting(it)) }
     }
 
+    fun onCameraError(message: String) = dispatch(NavEvent.ErrorOccurred(ErrorKind.CAMERA, message))
+    fun onAnalysisRate(rate: Double) { analysisRate = rate; publish() }
+    fun logCamera(event: String) = log.log(event)
+
     fun openSettings() { settingsOpen = true; publish() }
     fun closeSettings() { settingsOpen = false; publish() }
     fun changeSettings(change: (Settings) -> Settings) = settingsStore.update(change)
@@ -183,7 +193,7 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
         when (kind) {
             ErrorKind.DATA -> loadData()
             ErrorKind.SPEECH -> { speaker.shutdown(); speaker = createSpeaker(); speaker.setRate(settingsStore.settings.value.speechRate.toFloat()) }
-            ErrorKind.CAMERA -> { cameraWanted = true; updateCamera() } // real restart arrives with the camera in Step 6
+            ErrorKind.CAMERA -> { cameraWanted = true; updateCamera(); _cameraGeneration.value++ }
         }
     }
 
@@ -208,6 +218,7 @@ class NovaViewModel(app: Application) : AndroidViewModel(app) {
                 showSettingsButton = showSettingsButton,
                 requestPermission = requestPermission,
                 settingsOpen = settingsOpen,
+                analysisRate = analysisRate,
                 settings = settingsStore.settings.value,
                 markerIds = data?.markers?.markers?.map { it.id }?.sorted() ?: emptyList(),
                 logLines = log.tail.value,

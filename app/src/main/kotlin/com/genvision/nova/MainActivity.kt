@@ -15,6 +15,11 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.camera.view.PreviewView
+import com.genvision.nova.camera.CameraSession
+import com.genvision.nova.camera.FakeMarkerDetector
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -35,6 +40,18 @@ class MainActivity : ComponentActivity() {
 
     private val cameraPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.onPermissionResult(it) }
+
+    /** Replaced by the OpenCV detector in Step 7. */
+    private val detector = FakeMarkerDetector()
+    private val camera by lazy {
+        CameraSession(this, detector, vm::onFrameDetections, vm::onAnalysisRate, vm::onCameraError)
+    }
+    private var previewView by mutableStateOf<PreviewView?>(null)
+
+    override fun onDestroy() {
+        camera.shutdown()
+        super.onDestroy()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +74,20 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // Start and stop the camera with the machine's wishes; also restart it after Retry.
+        val cameraActive by vm.cameraActive.collectAsStateWithLifecycle()
+        val generation by vm.cameraGeneration.collectAsStateWithLifecycle()
+        val developerMode = ui.settings.developerMode
+        LaunchedEffect(cameraActive, generation, developerMode, previewView) {
+            if (cameraActive) {
+                vm.logCamera("camera_start")
+                camera.start(this@MainActivity, if (developerMode) previewView?.surfaceProvider else null)
+            } else {
+                vm.logCamera("camera_stop")
+                camera.stop()
+            }
+        }
+
         // Keep the screen on while guiding (FR-17).
         val guiding = ui.navState == NavState.WAITING || ui.navState == NavState.GUIDING
         DisposableEffect(guiding) {
@@ -76,7 +107,7 @@ class MainActivity : ComponentActivity() {
                     onSettings = vm::openSettings,
                     onOpenAppSettings = ::openAppSettings,
                 )
-                NavState.WAITING, NavState.GUIDING -> GuidanceScreen(ui, vm, ::exportLog)
+                NavState.WAITING, NavState.GUIDING -> GuidanceScreen(ui, vm, ::exportLog) { previewView = it }
                 NavState.ARRIVED -> ArrivalScreen(ui, vm::chooseAnother)
                 NavState.ERROR -> ErrorScreen(ui, vm::retry, vm::back)
             }
