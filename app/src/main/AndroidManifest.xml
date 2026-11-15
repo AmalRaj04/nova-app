@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Only CAMERA is declared. INTERNET is deliberately absent: NOVA works fully offline. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <application
+        android:label="NOVA"
+        android:allowBackup="false" />
+</manifest>

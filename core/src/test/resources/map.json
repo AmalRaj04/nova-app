@@ -1,0 +1,27 @@
+{
+  "meta": {"version": 1, "route": "Entrance to D block, first floor", "frame": "x right, y down, metres; bearing clockwise from plan up", "directed": true},
+  "nodes": [
+    {"id": "ENTRANCE_PLAZA", "name": "the entrance", "type": "junction", "floor": 0, "x": 0.0, "y": 20.63, "doorSide": null},
+    {"id": "STAIRS_FOOT", "name": "the foot of the main stairs", "type": "stairs", "floor": 0, "x": 0.0, "y": 19.28, "doorSide": null},
+    {"id": "STAIRS_LANDING_DOWN", "name": "the stairs landing", "type": "stairs", "floor": 0, "x": 0.0, "y": 14.48, "doorSide": null},
+    {"id": "STAIRS_LANDING_UP", "name": "the upper end of the landing", "type": "stairs", "floor": 0, "x": 0.0, "y": 13.18, "doorSide": null},
+    {"id": "MAIN_STAIRS_TOP", "name": "the top of the main stairs", "type": "stairs", "floor": 1, "x": 0.0, "y": 10.18, "doorSide": null},
+    {"id": "WALK_SD", "name": "the walkway corner near the stairs", "type": "junction", "floor": 1, "x": 5.07, "y": 8.77, "doorSide": null},
+    {"id": "WALK_FD", "name": "the start of the D block path", "type": "junction", "floor": 1, "x": 10.13, "y": 0.0, "doorSide": null},
+    {"id": "D11", "name": "D11", "type": "room", "floor": 1, "x": 16.97, "y": 3.95, "doorSide": "right"},
+    {"id": "D12", "name": "D12", "type": "room", "floor": 1, "x": 25.89, "y": 9.10, "doorSide": "right"},
+    {"id": "D13", "name": "D13", "type": "room", "floor": 1, "x": 34.81, "y": 14.25, "doorSide": "right"}
+  ],
+  "edges": [
+    {"from": "ENTRANCE_PLAZA", "to": "STAIRS_FOOT", "weight": 1.35, "kind": "walk", "steps": null, "hint": ""},
+    {"from": "STAIRS_FOOT", "to": "STAIRS_LANDING_DOWN", "weight": 4.8, "kind": "stairs", "steps": 16, "hint": ""},
+    {"from": "STAIRS_LANDING_DOWN", "to": "STAIRS_LANDING_UP", "weight": 1.3, "kind": "walk", "steps": null, "hint": ""},
+    {"from": "STAIRS_LANDING_UP", "to": "MAIN_STAIRS_TOP", "weight": 3.0, "kind": "stairs", "steps": 10, "hint": ""},
+    {"from": "MAIN_STAIRS_TOP", "to": "WALK_SD", "weight": 5.26, "kind": "walk", "steps": null, "hint": ""},
+    {"from": "WALK_SD", "to": "WALK_FD", "weight": 10.13, "kind": "walk", "steps": null, "hint": ""},
+    {"from": "WALK_FD", "to": "D11", "weight": 7.9, "kind": "walk", "steps": null, "hint": ""},
+    {"from": "D11", "to": "D12", "weight": 10.3, "kind": "walk", "steps": null, "hint": ""},
+    {"from": "D12", "to": "D13", "weight": 10.3, "kind": "walk", "steps": null, "hint": ""}
+  ],
+  "destinations": ["D11", "D12", "D13"]
+}
