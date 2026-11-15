@@ -26,3 +26,12 @@ Defaults chosen for the open questions in NOVA_APP_SPEC.md. Each can change in d
 - Step 2: A turn of exactly 180 degrees counts as +180 (turn around). `TurnClassifier` returns an enum; the spoken words are added in Step 3 with `Phrases`.
 - Step 3: The spec gives wording only for walk-then-stairs. Where it is silent I chose: stairs as the first movement of a leg say "Climb {s} steps up." (no "Then"); a walk after stairs says "Then walk about {n} steps."; 1 step is spoken as "1 step". A turn is worked out once per leg, at the start marker; later edges in the same leg get no turn word.
 - Step 3: A leg ends at the next node that has a marker, so unmarked nodes (stairs foot, upper landing) are folded into the leg before them.
+- Step 4: Choices where the state table is silent:
+  - A sighting at the node already being guided from (after the cooldown) is logged and gets no speech; timers still reset.
+  - Rows 12 and 13 speak two sentences as two `Speak` actions: the first interrupts, the second queues. Repeat speaks both together.
+  - Row 13 with no forward path says the "behind you" message, keeps the old route and stays in GUIDING, as the table says.
+  - Arrival also emits `StopCamera` (FR-11, "stop guiding"); row 19 stops it again, which is harmless. Row 19 also speaks the ready prompt so the return to Home is spoken (accessibility rule 9).
+  - Reminders do not fire while the app is in the background; returning restarts the reminder timer.
+  - Added a `BackPressed` event for the Error screen's Back button (goes to HOME).
+  - The machine does not emit timer actions: it keeps its own timer using `Clock`, and the caller sends `Tick` about once a second.
+  - Speak actions carry `interrupt` and `protected` flags so the speaker can keep arrival uninterrupted (FR-16).
