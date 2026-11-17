@@ -1,0 +1,16 @@
+{
+  "meta": {"version": 1, "dictionary": "DICT_4X4_50"},
+  "markers": [
+    {"id": 0, "nodeId": "ENTRANCE_PLAZA", "facingDeg": 0, "where": "Entrance row, left strip between the stair lanes"},
+    {"id": 1, "nodeId": "ENTRANCE_PLAZA", "facingDeg": 0, "where": "Entrance row, right strip"},
+    {"id": 2, "nodeId": "STAIRS_LANDING_DOWN", "facingDeg": 0, "where": "Long step (landing) row, left strip"},
+    {"id": 3, "nodeId": "STAIRS_LANDING_DOWN", "facingDeg": 0, "where": "Long step (landing) row, right strip"},
+    {"id": 4, "nodeId": "MAIN_STAIRS_TOP", "facingDeg": 0, "where": "Door wall row at the top of the stairs, left strip"},
+    {"id": 5, "nodeId": "MAIN_STAIRS_TOP", "facingDeg": 0, "where": "Door wall row, right strip"},
+    {"id": 6, "nodeId": "WALK_SD", "facingDeg": 90, "where": "Walkway pillar near the stairs-D corner"},
+    {"id": 7, "nodeId": "WALK_FD", "facingDeg": 30, "where": "Walkway pillar at the F-D corner, start of the D path"},
+    {"id": 8, "nodeId": "D11", "facingDeg": 120, "where": "D path pillar P1, beside D11"},
+    {"id": 9, "nodeId": "D12", "facingDeg": 120, "where": "D path pillar P2, beside D12"},
+    {"id": 10, "nodeId": "D13", "facingDeg": 120, "where": "D path pillar P3, beside D13"}
+  ]
+}
